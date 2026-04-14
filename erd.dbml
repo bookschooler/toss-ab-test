@@ -1,0 +1,60 @@
+// A/B Test ERD — 소수점 구매 입력창 문구 변경 실험
+// Tool: https://dbdiagram.io
+// 붙여넣기: dbdiagram.io 접속 → 왼쪽 패널에 전체 코드 붙여넣기
+
+Table users {
+  user_id string [pk]
+  experiment_group string // A(대조군) / B(실험군)
+  gender string
+  age_group string
+  device_type string // ios / android
+  investment_type string // 공격투자형, 적극투자형, 위험중립형, 안정추구형, 안정형
+  acquisition_channel string // organic / ad / search
+  first_trade_date date
+  total_trade_count int
+  is_first_fractional_exp bool
+}
+
+Table events {
+  event_id string [pk]
+  user_id string [ref: > users.user_id]
+  session_id string
+  event_sequence int // 세션 내 이벤트 발생 순서 (1, 2, 3...)
+  event_name string
+  event_start_timestamp timestamp
+  event_end_timestamp timestamp
+  duration_ms int // 이벤트 소요 시간 (ms, 의도적 중복)
+  engagement_time_msec int // 실제 앱 포커스 시간 (백그라운드 제외)
+  client_timestamp timestamp // 클라이언트 기록 시각 (±2초 오차)
+  server_timestamp timestamp // 서버 수신 시각 (네트워크 지연 포함)
+  experiment_group string // A / B (소수점 퍼널 유저만 해당, 의도적 중복)
+  ticker string // 종목 코드 (의도적 중복 — 이탈 분석용)
+  source_page string // home / search / stock_detail
+  input_amount_krw int // input_amount_complete 이벤트 전용
+}
+
+Table orders {
+  order_id string [pk]
+  user_id string [ref: > users.user_id]
+  session_id string
+  event_id string [ref: - events.event_id] // 1:1
+  order_type string // fractional / integer
+  ticker string
+  purchase_amount_krw int // 총 구매 금액
+  price_per_share_krw int // 체결 당시 주가
+  fractional_shares float // 소수점 구매 시
+  integer_shares int // 정수 구매 시
+  commission_krw int // 수수료 (0.25%, 토스증권 정상가 기준)
+  status string // success / fail / canceled
+  error_code string // 실패 사유
+  order_timestamp timestamp
+}
+
+Table baseline {
+  date date [pk]
+  overseas_stock_uv int // 해외주식 상세보기 UV
+  purchase_button_click_uv int // 구매하기 버튼 클릭 UV
+  integer_purchase_cvr float // 정수 구매 전환율 (Guardrail)
+  fractional_purchase_cvr float // 소수점 구매 전환율
+  avg_decision_velocity_ms int // 평균 결정 시간 (ms)
+}
